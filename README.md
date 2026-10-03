@@ -72,6 +72,7 @@ Skip setup when you want one implementer or one-off dials. Pick the skill for a 
 | [`commandcode-delegate`](skills/commandcode-delegate/SKILL.md) | [Command Code](https://commandcode.ai/docs/headless) (`cmd`; `cmdc` on Windows) | `--yolo` — the only headless write state; no sandbox [^commandcode] | `--read-only` (withheld tools + `plan`) | `--continue-last`, `--session <id>` |
 | [`cursor-delegate`](skills/cursor-delegate/SKILL.md) | [Cursor Agent](https://cursor.com/cli) (`cursor-agent`) | `--force`; `--no-force` withholds command approval | `--read-only` (plan mode) | `--resume-last`, `--session <id>` |
 | [`grok-delegate`](skills/grok-delegate/SKILL.md) | Grok Build (`grok`) | workspace-scoped; `--full-access` opt-in | `--read-only` — best-effort [^grok] | `--resume-last`, `--session <id>` |
+| [`kiro-delegate`](skills/kiro-delegate/SKILL.md) | [Kiro CLI](https://kiro.dev/docs/cli/headless/) (`kiro-cli`) — headless auth via `KIRO_API_KEY` (Pro tier and up) | `--trust-all-tools`; no sandbox; `--trust-tools <list>` narrows it [^kiro] | `--read-only` (`--trust-tools=read,grep`) + tripwire [^kiro] | `--resume-last`, `--session <id>` |
 | [`kimi-delegate`](skills/kimi-delegate/SKILL.md) | [Kimi Code](https://moonshotai.github.io/kimi-code/en/) (`kimi`) | `auto permission mode`, always | — [^none] | `--resume-last`, `--session <id>` |
 | [`opencode-delegate`](skills/opencode-delegate/SKILL.md) | [OpenCode](https://opencode.ai) (`opencode`) | agent `build` (`--model` required) | `--read-only` (agent `plan`) | `--resume-last`, `--session <id>` |
 | [`pi-delegate`](skills/pi-delegate/SKILL.md) | [Pi](https://github.com/earendil-works/pi-mono) (`pi`) | full local tools — no sandbox, no permission modes [^none]; project trust opt-in | `--read-only` (`read,grep,find,ls`) | `--resume-last`, `--session <id>` |
@@ -102,6 +103,13 @@ is configurable through it.
 
 [^grok]: `grok` cannot be prevented from writing headlessly. The relay reports a tri-state
 `readOnlyViolation` tripwire for detected Git-visible changes; it does not enforce or attribute them.
+
+[^kiro]: Kiro has no sandbox. `--trust-tools` trusts tool categories and headless Kiro treats every
+untrusted `ask` as a deny, but your own permission rules still apply, so a `--read-only` run also
+reports the tri-state `readOnlyViolation` Git tripwire. The relay always passes `--model`/`--effort`
+straight through when given and names an agent engine (`--v3` by default), since `stream-json` needs
+V2 or V3. Kiro's stream-json event fields are undocumented, so the report and session id are read
+defensively.
 
 [^zcode]: ZCode ships its CLI **inside the desktop app** — there is no `zcode` on PATH, no npm
 package, and the public docs cover only the GUI. The relay resolves it from
@@ -349,13 +357,21 @@ Per skill — platform, CLI version, and what the run exercised:
   (including the resume directive), denial shape, `--read-only`/`--allow-all-tools` conflict
   validation, bounded version preflight, missing binary, result parsing, and whole-process-tree
   timeout/abort cleanup.
+- `kiro-delegate` — contract-tested against a fake CLI, live run pending: argv exactness for write,
+  `--read-only` (`--trust-tools=read,grep`), `--trust-tools`, `--model`/`--effort`, `--agent`,
+  `--engine v2`, and `--resume`/`--resume-id` resume; brief delivery on stdin; defensive stream-json
+  parsing (last assistant text and delta fallbacks, V3 interruption record reported as failed); the
+  read-only tripwire scenario matrix; usage errors exiting 2; `kiro_unavailable`/127; `--kiro-path`
+  and `KIRO_CLI` overrides; bounded `--version` preflight; and whole-process-tree timeout/abort
+  cleanup. No run against a real `kiro-cli` is recorded, and the native Windows launch (a native
+  `kiro-cli.exe` without a shell) is unverified.
 - `delegate-setup` — contract-tested: discover JSON shape, config validate/write/load, whole-lane
   project overlay, global write without creating `.delegate/`, and `--lane` resolve / wrong-skill /
   flag-override against relays. The smoke suite runs live discovery against installed CLIs
   (versions vary by machine). Native Windows discover smoke not yet claimed.
 
 Not yet verified: native Windows launches for `claude`, exact-head `cline`, `grok`, `kimi`,
-`pi`, `qoder`, `vibe`, and `omp` (`codex`/`opencode`/`grok`/`commandcode` have contract-tested `.cmd` shim handling;
+`pi`, `qoder`, `vibe`, `omp`, and `kiro` (`codex`/`opencode`/`grok`/`commandcode` have contract-tested `.cmd` shim handling;
 Cursor serializes a pre-joined, quoted command; Qoder and Vibe target their documented native executables).
 Claude's own shell sandbox is unsupported on native Windows regardless of launch mechanics, and upstream
 Vibe officially targets UNIX. A native Linux `cursor-agent` run is unverified. The full delegate →

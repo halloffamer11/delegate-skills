@@ -92,6 +92,8 @@ async function runScenario(h, skill, scenario) {
   const child = h.runRelay(skill, workDir, outDir, ["--read-only"], {
     SMOKE_MODE: skill === "grok"
       ? "grok-read-only"
+      : skill === "kiro"
+        ? "kiro-read-only"
       : skill === "commandcode"
         ? (appendFile ? "commandcode-read-only-append" : "commandcode-read-only-clean")
         : appendFile ? "claude-read-only-append" : "claude-read-only-clean",
@@ -176,7 +178,7 @@ export async function runReadOnlyTripwire(h) {
     ...(!h.WIN ? [{ name: "raw-symlink-target-write", rawSymlinkTarget: true, expected: true }] : []),
     ...(!h.WIN ? [{ name: "artifact-symlink-target-write", artifactsInside: true, artifactSymlink: true, expected: true, commandcodeExit: 2, commandcodeResult: false }] : []),
   ];
-  const tripwireSkills = ["claude", "grok", ...(!h.WIN ? ["commandcode"] : [])];
+  const tripwireSkills = ["claude", "grok", "kiro", ...(!h.WIN ? ["commandcode"] : [])];
   if (h.WIN) console.log("  skip  commandcode tripwire scenarios: Git-visible tripwire coverage is POSIX-only");
   for (const skill of tripwireSkills) {
     for (const scenario of scenarios) await runScenario(h, skill, scenario);

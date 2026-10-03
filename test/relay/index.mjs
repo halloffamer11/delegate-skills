@@ -20,6 +20,7 @@ import { runAider } from "./aider.mjs";
 import { runCopilot } from "./copilot.mjs";
 import { runCommandcode } from "./commandcode.mjs";
 import { runZcode } from "./zcode.mjs";
+import { runKiro } from "./kiro.mjs";
 
 export const runners = [
   ["package-shape", runPackageShape],
@@ -39,6 +40,7 @@ export const runners = [
   ["aider", runAider],
   ["copilot", runCopilot],
   ["commandcode", runCommandcode],
+  ["kiro", runKiro],
   ["read-only-tripwire", runReadOnlyTripwire],
   ["timeout-tree", runTimeoutTree],
   ["abort", runAbort],

@@ -340,6 +340,46 @@ if (["omp-success", "omp-error"].includes(process.env.SMOKE_MODE)) {
     // The real CLI exits 0 for a clean run even when the task did not finish.
     process.exit(0);
   });
+} else if (process.env.SMOKE_MODE === "kiro-exit-early") {
+  // Exits without reading the piped brief: the relay must survive the EPIPE and report it.
+  console.log(JSON.stringify({ type: "error", message: "fake kiro auth failure: KIRO_API_KEY not accepted" }));
+  console.error("fake kiro: authentication failed");
+  process.exit(1);
+} else if ([
+  "kiro-success",
+  "kiro-deltas",
+  "kiro-interrupted",
+  "kiro-read-only",
+].includes(process.env.SMOKE_MODE)) {
+  // kiro.dev documents stream-json only as one JSON object per line plus, in V3, a final
+  // interruption record; these shapes are plausible stand-ins, not documented ones.
+  let brief = "";
+  process.stdin.setEncoding("utf8");
+  process.stdin.on("data", (chunk) => { brief += chunk; });
+  process.stdin.on("end", () => {
+    const mode = process.env.SMOKE_MODE;
+    if (process.env.SMOKE_ARGS_FILE) fs.writeFileSync(process.env.SMOKE_ARGS_FILE, JSON.stringify({ args, brief, cwd: process.cwd() }));
+    if (mode === "kiro-read-only" && process.env.SMOKE_APPEND_FILE) {
+      fs.appendFileSync(process.env.SMOKE_APPEND_FILE, "appended by fake kiro\n");
+    }
+    const sessionId = "22222222-2222-4222-8222-222222222222";
+    console.log(JSON.stringify({ type: "session_start", sessionId }));
+    console.log(JSON.stringify({ type: "tool_use", name: "read", input: { path: "README.md" } }));
+    if (mode === "kiro-deltas") {
+      console.log(JSON.stringify({ type: "assistant_message", role: "assistant", content: [{ type: "text", text: "working" }] }));
+      console.log(JSON.stringify({ type: "assistant_delta", delta: "fake kiro " }));
+      console.log(JSON.stringify({ type: "assistant_delta", delta: "streamed ✅" }));
+      console.log(JSON.stringify({ type: "end" }));
+      process.exit(0);
+    }
+    console.log(JSON.stringify({ type: "assistant_message", role: "assistant", content: "fake kiro completed" }));
+    if (mode === "kiro-interrupted") {
+      console.log(JSON.stringify({ type: "interrupted", reason: "cancelled" }));
+      process.exit(0);
+    }
+    console.log(JSON.stringify({ type: "result", sessionId, usage: { inputTokens: 7, outputTokens: 2 } }));
+    process.exit(0);
+  });
 } else if (process.env.SMOKE_MODE === "copilot-success") {
   fs.writeFileSync(process.env.SMOKE_ARGS_FILE, JSON.stringify(args));
   console.log(JSON.stringify({ type: "assistant.message", data: { content: "working" }, ephemeral: false }));

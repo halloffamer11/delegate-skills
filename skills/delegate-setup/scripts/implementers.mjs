@@ -380,6 +380,23 @@ export const IMPLEMENTERS = Object.freeze([
     winShell: false,
 
   },
+  {
+    key: "kiro",
+    skill: "kiro-delegate",
+    binary: "kiro-cli",
+    versionArgs: ["--version"],
+    // Headless runs authenticate with KIRO_API_KEY, which this script may not read;
+    // `kiro-cli whoami` reports the interactive login instead, so auth stays unknown.
+    authProbe: null,
+    // `kiro-cli chat --list-models --format json` exists, but its JSON shape is not
+    // documented, so no parser is guessed here.
+    modelProbe: null,
+    // Sessions live under ~/.kiro/sessions/ (KIRO_HOME overrides), but the V2 and V3
+    // on-disk formats are not documented as one entry per session.
+    usageProbe: null,
+    supports: ["model", "effort", "timeout", "readOnly"],
+    winShell: false,
+  },
 ]);
 
 /** Prototype-free map so names like "toString" cannot pass as implementers. */
@@ -393,6 +410,8 @@ export const IMPLEMENTER_BY_KEY = Object.freeze(
 export const CLAUDE_EFFORT = Object.freeze(["low", "medium", "high", "xhigh", "max", "ultracode"]);
 export const AGY_EFFORT = Object.freeze(["low", "medium", "high"]);
 export const COPILOT_EFFORT = Object.freeze(["low", "medium", "high", "xhigh", "max"]);
+/** kiro.dev/docs/reference/cli-commands: `kiro-cli chat --effort <LEVEL>`. */
+export const KIRO_EFFORT = Object.freeze(["low", "medium", "high", "xhigh", "max"]);
 export const OMP_THINKING = Object.freeze(["off", "auto", "minimal", "low", "medium", "high", "xhigh", "max"]);
 export const CODEX_SANDBOX = Object.freeze(["read-only", "workspace-write", "danger-full-access"]);
 export const GROK_SANDBOX = Object.freeze(["workspace", "read-only", "off"]);

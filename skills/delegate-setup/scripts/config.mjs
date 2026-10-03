@@ -31,6 +31,7 @@ import {
   ALL_DIALS,
   CLAUDE_EFFORT,
   COPILOT_EFFORT,
+  KIRO_EFFORT,
   OMP_THINKING,
   CODEX_SANDBOX,
   CONFIG_VERSION,
@@ -228,6 +229,9 @@ function validateDialValue(implementer, field, value, laneName, label) {
     if (implementer === "copilot" && !COPILOT_EFFORT.includes(value)) {
       return `${label}: lane ${laneName}.effort must be one of: ${COPILOT_EFFORT.join(", ")}`;
     }
+    if (implementer === "kiro" && !KIRO_EFFORT.includes(value)) {
+      return `${label}: lane ${laneName}.effort must be one of: ${KIRO_EFFORT.join(", ")}`;
+    }
     if (implementer === "omp" && !OMP_THINKING.includes(value)) {
       return `${label}: lane ${laneName}.effort must be one of: ${OMP_THINKING.join(", ")}`;
     }
@@ -288,6 +292,8 @@ function validateModelOrProvider(implementer, field, value, laneName, label) {
     implementer === "omp" ||
     implementer === "opencode" ||
     implementer === "commandcode" ||
+    // kiro-delegate accepts only these tokens for --model.
+    implementer === "kiro" ||
     // codex (and any other win32 shell:true relay) must not accept cmd metacharacters in -m.
     implementer === "codex" ||
     IMPLEMENTER_BY_KEY[implementer]?.winShell
