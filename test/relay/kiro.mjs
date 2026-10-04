@@ -89,6 +89,19 @@ export async function runKiro(h) {
     h.check("kiro deltas: completed with the streamed text as the report",
       run.status === 0 && result?.status === "completed" && result.finalMessage === "fake kiro streamed ✅");
   }
+  // The real V3 stream (kiro-cli 2.27.1): ACP sessionUpdate events, then runFinished
+  // carrying the report in data.finalText and the session id in data.sessionId.
+  {
+    const { run, result } = dispatchKiro(h, "acp", [], { SMOKE_MODE: "kiro-acp" });
+    h.check("kiro acp: runFinished finalText is the report",
+      run.status === 0 && result?.status === "completed" && result.finalMessage === "fake kiro final ✅" &&
+      result.sessionId === "sess_22222222-2222-4222-8222-222222222222");
+  }
+  {
+    const { run, result } = dispatchKiro(h, "acp-chunks", [], { SMOKE_MODE: "kiro-acp-chunks" });
+    h.check("kiro acp chunks: without finalText, the agent_message_chunk text is the report",
+      run.status === 0 && result?.status === "completed" && result.finalMessage === "fake kiro acp ✅");
+  }
   // V3's interruption record ends the run as failed even when kiro-cli exits 0.
   {
     const { run, result } = dispatchKiro(h, "interrupted", [], { SMOKE_MODE: "kiro-interrupted" });

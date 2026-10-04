@@ -786,6 +786,15 @@ function classifyEvent(event) {
   // Returns { kind, text } — kind is result | assistant | delta | interrupt | error | other.
   const type = eventType(event);
   if (/interrupt/i.test(type) || event.interrupted === true) return { kind: "interrupt", text: null };
+  // Observed from kiro-cli 2.27.1 (V3): ACP `sessionUpdate` events carry `data.update`, whose
+  // `agent_message_chunk` holds the reply text, and a closing `runFinished` holds the whole
+  // report in `data.finalText`.
+  if (type === "runFinished") return { kind: "result", text: textOf(event.data?.finalText) };
+  if (type === "sessionUpdate") {
+    const update = event.data?.update;
+    if (update?.sessionUpdate === "agent_message_chunk") return { kind: "delta", text: textOf(update.content) };
+    return { kind: "other", text: null };
+  }
   if (/thought|thinking|reason/i.test(type)) return { kind: "other", text: null };
   if (/delta|chunk/i.test(type)) {
     return { kind: "delta", text: textOf(event.delta) ?? textOf(event.text) ?? textOf(event.content) ?? textOf(event.data) };

@@ -380,6 +380,28 @@ if (["omp-success", "omp-error"].includes(process.env.SMOKE_MODE)) {
     console.log(JSON.stringify({ type: "result", sessionId, usage: { inputTokens: 7, outputTokens: 2 } }));
     process.exit(0);
   });
+} else if (["kiro-acp", "kiro-acp-chunks"].includes(process.env.SMOKE_MODE)) {
+  // The V3 stream kiro-cli 2.27.1 actually wrote for a one-word brief, trimmed to the
+  // events the relay reads: ACP session updates between runStarted and runFinished.
+  let brief = "";
+  process.stdin.setEncoding("utf8");
+  process.stdin.on("data", (chunk) => { brief += chunk; });
+  process.stdin.on("end", () => {
+    const mode = process.env.SMOKE_MODE;
+    if (process.env.SMOKE_ARGS_FILE) fs.writeFileSync(process.env.SMOKE_ARGS_FILE, JSON.stringify({ args, brief, cwd: process.cwd() }));
+    const sessionId = "sess_22222222-2222-4222-8222-222222222222";
+    const update = (u) => console.log(JSON.stringify({ type: "sessionUpdate", data: { sessionId, update: u } }));
+    console.log(JSON.stringify({ type: "runStarted", data: { payloadSchema: "acp", acpProtocolVersion: 1, engine: "v3" } }));
+    update({ sessionUpdate: "session_info_update", _meta: { kiro: { turnStart: true, kind: "turn_start" } } });
+    update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "fake kiro " } });
+    update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "acp ✅" } });
+    update({ sessionUpdate: "session_info_update", _meta: { kiro: { promptTurnSummaries: [{ unit: "credit", unitPlural: "credits", usage: 0.24 }], status: "success", kind: "turn_completion" } } });
+    update({ sessionUpdate: "session_info_update", _meta: { kiro: { turnEnd: { stopReason: "end_turn" }, kind: "turn_end", stopReason: "end_turn" } } });
+    const finished = { sessionId, status: "success", stopReason: "end_turn", finalTextTruncated: false };
+    if (mode === "kiro-acp") finished.finalText = "fake kiro final ✅";
+    console.log(JSON.stringify({ type: "runFinished", data: finished }));
+    process.exit(0);
+  });
 } else if (process.env.SMOKE_MODE === "copilot-success") {
   fs.writeFileSync(process.env.SMOKE_ARGS_FILE, JSON.stringify(args));
   console.log(JSON.stringify({ type: "assistant.message", data: { content: "working" }, ephemeral: false }));
